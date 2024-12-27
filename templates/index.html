@@ -1,0 +1,106 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trending Topics on Twitter</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-r from-purple-900 via-blue-800 to-blue-900 text-white min-h-screen flex flex-col items-center justify-center py-8">
+    <div class="w-full max-w-5xl px-6 py-8 bg-gray-800 rounded-lg shadow-lg">
+        <h1 class="text-4xl font-semibold text-center mb-6">Twitter scrapper</h1>
+
+        <div class="text-center mb-6">
+            <button onclick="fetchTrends()" id="fetchButton"
+                    class="bg-indigo-600 hover:bg-indigo-700 transition px-8 py-3 rounded-lg text-lg">
+                Refresh Trends
+            </button>
+        </div>
+
+        <div id="loading" class="hidden text-center font-medium">Please wait, fetching the latest trends...</div>
+
+        <div id="error" class="hidden text-red-600 text-center mb-4 font-semibold"></div>
+
+        <div id="results" class="hidden">
+            <div class="text-gray-300 text-center mb-4 text-sm">
+                 IP Address: <span id="ipAddress"></span>
+            </div>
+
+            <div id="trendsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            </div>
+
+            <div class="text-gray-400 text-center mb-4">
+                <h3 class="font-semibold">Database Record:</h3>
+                <pre id="mongodbRecord" class="bg-gray-700 p-4 rounded-md text-sm overflow-x-auto"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function fetchTrends() {
+            const button = document.getElementById('fetchButton');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const error = document.getElementById('error');
+
+            button.disabled = true;
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+
+            fetch('/scrape')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('ipAddress').textContent = data.data.ip_address;
+
+                        const trendsContainer = document.getElementById('trendsContainer');
+                        trendsContainer.innerHTML = '';
+
+                        data.data.trends.forEach((trend, index) => {
+                            const trendElement = document.createElement('div');
+                            trendElement.classList.add('bg-gray-700', 'p-5', 'rounded-lg', 'transition', 'hover:bg-gray-600');
+
+                            const trendName = document.createElement('div');
+                            trendName.classList.add('text-xl', 'font-bold');
+                            trendName.textContent = `#${index + 1} ${trend.name}`;
+
+                            const trendCategory = document.createElement('div');
+                            trendCategory.classList.add('text-gray-400', 'mt-1');
+                            trendCategory.textContent = trend.category;
+
+                            const trendPosts = document.createElement('div');
+                            trendPosts.classList.add('text-gray-300', 'mt-2');
+                            if (trend.posts) {
+                                trendPosts.textContent = trend.posts;
+                            }
+
+                            trendElement.appendChild(trendName);
+                            trendElement.appendChild(trendCategory);
+                            trendElement.appendChild(trendPosts);
+
+                            trendsContainer.appendChild(trendElement);
+                        });
+
+                        // Update MongoDB record
+                        document.getElementById('mongodbRecord').textContent =
+                            JSON.stringify(JSON.parse(data.data.mongodb_record), null, 2);
+
+                        results.classList.remove('hidden');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(err => {
+                    error.textContent = `Error: ${err.message}`;
+                    error.classList.remove('hidden');
+                })
+                .finally(() => {
+                    button.disabled = false;
+                    loading.classList.add('hidden');
+                });
+        }
+    </script>
+</body>
+</html>
